@@ -33,11 +33,30 @@
   .header-actions { display: flex; gap: 20px; align-items: center; color: var(--text-secondary); font-size: 20px; }
   .header-actions span { cursor: pointer; transition: color .2s; position: relative; }
   .header-actions span:hover { color: var(--text); }
+  
   .fav-count { position: absolute; top: -6px; right: -8px; background: var(--accent-orange); color: #fff; font-size: 10px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0); transition: all 0.3s; }
   .fav-count.active { opacity: 1; transform: scale(1); }
+  
   .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-orange), #ff8c00); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; cursor: pointer; transition: transform 0.2s; }
   .avatar:hover { transform: scale(1.05); }
   .avatar.logged-in { background: linear-gradient(135deg, #4caf50, #2e7d32); }
+
+  /* УВЕДОМЛЕНИЯ (КОЛОКОЛЬЧИК) */
+  .bell-wrapper { position: relative; }
+  .bell-dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background: var(--accent-orange); border-radius: 50%; display: none; border: 2px solid var(--bg-light); }
+  .bell-dot.active { display: block; }
+  
+  .notif-dropdown { position: absolute; top: 40px; right: -10px; width: 320px; background: var(--bg-light); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transform: translateY(-10px); transition: all 0.2s ease; z-index: 200; }
+  .notif-dropdown.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .notif-header { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+  .notif-body { max-height: 300px; overflow-y: auto; }
+  .notif-item { padding: 16px; border-bottom: 1px solid var(--border); font-size: 14px; display: flex; gap: 12px; transition: background 0.2s; }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item:hover { background: var(--card); }
+  .notif-icon { font-size: 20px; }
+  .notif-text { color: var(--text-secondary); line-height: 1.4; }
+  .notif-text b { color: var(--text); }
+  .notif-empty { padding: 30px 20px; text-align: center; color: var(--text-secondary); font-size: 14px; }
 
   .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
 
@@ -123,7 +142,7 @@
 
   .no-results { grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary); font-size: 16px; background: var(--card); border-radius: 12px; }
 
-  /* УВЕДОМЛЕНИЯ */
+  /* УВЕДОМЛЕНИЯ (ТОСТЫ) */
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg-light); color: var(--text); padding: 16px 24px; border-radius: 12px; border-left: 4px solid var(--accent-orange); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; transform: translateY(100px); opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2000; }
   .toast.show { transform: translateY(0); opacity: 1; }
   .toast-icon { font-size: 20px; }
@@ -133,28 +152,12 @@
   .modal-overlay.active { opacity: 1; pointer-events: auto; }
 
   /* --- ПЛЕЕР --- */
-  .player-modal-content {
-    background: #000; border-radius: 16px; width: 100%; max-width: 1000px;
-    position: relative; transform: translateY(20px); transition: transform 0.3s ease;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border);
-    overflow: hidden;
-  }
+  .player-modal-content { background: #000; border-radius: 16px; width: 100%; max-width: 1000px; position: relative; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); overflow: hidden; }
   .modal-overlay.active .player-modal-content { transform: translateY(0); }
-  
-  .player-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 24px; background: #111; color: #fff;
-    border-bottom: 1px solid #333;
-  }
+  .player-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #111; color: #fff; border-bottom: 1px solid #333; }
   .player-title { font-size: 18px; font-weight: 600; }
-  .player-video-container {
-    width: 100%; aspect-ratio: 16/9; background: #000;
-    display: flex; align-items: center; justify-content: center;
-    position: relative;
-  }
-  .player-video-container video {
-    width: 100%; height: 100%; outline: none;
-  }
+  .player-video-container { width: 100%; aspect-ratio: 16/9; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+  .player-video-container video { width: 100%; height: 100%; outline: none; }
 
   .catalog-modal-content { background: var(--bg); border-radius: 16px; width: 100%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
   .modal-overlay.active .catalog-modal-content { transform: translateY(0); }
@@ -189,6 +192,7 @@
     .promo-thumb { flex: 0 0 80px; height: 120px; }
     .player-header { padding: 12px 16px; }
     .player-title { font-size: 16px; }
+    .notif-dropdown { width: 280px; right: -20px; }
   }
   @media (max-width: 900px) {
     .nav-menu { display: none; } .header-search { width: 200px; }
@@ -221,7 +225,24 @@
       <span id="clearSearch" style="display:none; cursor:pointer; color:var(--text-secondary);" onclick="clearSearch()">✕</span>
     </div>
     <div class="header-actions">
-      <span>🔔</span>
+      
+      <!-- КОЛОКОЛЬЧИК С УВЕДОМЛЕНИЯМИ -->
+      <div class="bell-wrapper">
+        <span onclick="toggleNotifications(event)" title="Уведомления" style="position:relative; display:inline-block;">
+          🔔<span class="bell-dot" id="bellDot"></span>
+        </span>
+        
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-header">
+            Уведомления
+            <span style="font-size:12px; color:var(--accent-orange); cursor:pointer;" onclick="markAllRead()">Очистить</span>
+          </div>
+          <div class="notif-body" id="notifBody">
+            <!-- Содержимое будет генерироваться в JS -->
+          </div>
+        </div>
+      </div>
+
       <span onclick="scrollToFavorites()" title="Избранное">❤️<span class="fav-count" id="favCount">0</span></span>
       <div class="avatar" id="headerAvatar" onclick="openAuthModal()" title="Войти или зарегистрироваться">Вход</div>
     </div>
@@ -301,7 +322,6 @@
         <span style="font-size: 40px; margin-bottom: 10px;">🎬</span>
         <span style="font-size: 18px;">Трейлер для этого фильма скоро появится</span>
       </div>
-      
       <video id="videoPlayer" controls playsinline preload="metadata">
         Ваш браузер не поддерживает видео.
       </video>
@@ -348,7 +368,7 @@
   </div>
 </div>
 
-<!-- УВЕДОМЛЕНИЕ -->
+<!-- УВЕДОМЛЕНИЕ (ТОСТ) -->
 <div class="toast" id="toast">
   <span class="toast-icon" id="toastIcon">✓</span>
   <span id="toastText">Фильм добавлен в избранное</span>
@@ -374,7 +394,6 @@
     { title: 'Для вечернего просмотра', c1: '#2a2d4a', c2: '#1a2d4a' },
   ];
 
-  // ИСПРАВЛЕНО: Возвращены трейлеры для Интерстеллара и Гравитации
   const recommendations = [
     { id: 'interstellar', title: 'Интерстеллар', year: 2014, genre: 'Фантастика', rating: 8.7, score: 94, poster: 'images/interstellar.jpg', trailer: 'interstellar.mp4', description: 'Когда засуха, пыльные бури и вымирание растений приводят человечество к продовольственному кризису, коллектив исследователей и учёных отправляется сквозь червоточину в поисках планеты, которая сможет стать новым домом.' },
     { id: 'gravity', title: 'Гравитация', year: 2013, genre: 'Фантастика', rating: 7.7, score: 91, poster: 'images/gravity.jpg', trailer: 'gravity.mp4', description: 'Доктор Райан Стоун, блестящий специалист в области медицинского инжиниринга, отправляется в свою первую космическую миссию. Но катастрофа оставляет её одну на орбите.' },
@@ -410,6 +429,80 @@
 
   const defaultPromoMovie = { id: 'dune2', title: 'Дюна: Часть вторая', year: 2024, genre: 'Фантастика · Боевик', rating: 8.5, poster: 'images/dune-2.jpg', trailer: 'dunepart2_trailer4_1280.mp4', description: 'Пол Атрейдес объединяется с фременами, чтобы отомстить заговорщикам, уничтожившим его семью. Эпическое продолжение саги, которое обязательно понравится вам, если вы смотрели «Интерстеллар» и «Прибытие».' };
 
+  // ================= УВЕДОМЛЕНИЯ (КОЛОКОЛЬЧИК) =================
+  let notifications = [];
+  let unreadCount = 0;
+
+  function updateNotificationUI() {
+    const dot = document.getElementById('bellDot');
+    const body = document.getElementById('notifBody');
+    
+    if (!currentUser) {
+      dot.classList.remove('active');
+      body.innerHTML = `<div class="notif-empty">Войдите в аккаунт, чтобы получать уведомления.</div>`;
+      return;
+    }
+
+    if (notifications.length === 0) {
+      dot.classList.remove('active');
+      body.innerHTML = `<div class="notif-empty">У вас нет новых уведомлений.</div>`;
+    } else {
+      if (unreadCount > 0) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+      
+      body.innerHTML = notifications.map(n => `
+        <div class="notif-item">
+          <div class="notif-icon">${n.icon}</div>
+          <div class="notif-text">${n.text}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  function addNotification(icon, text) {
+    if (!currentUser) return;
+    notifications.unshift({ icon, text });
+    unreadCount++;
+    updateNotificationUI();
+  }
+
+  function toggleNotifications(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('notifDropdown');
+    
+    if (!currentUser) {
+      // Если не авторизован, открываем окно входа
+      openAuthModal();
+      showToast("Войдите, чтобы проверить уведомления");
+      return;
+    }
+
+    dropdown.classList.toggle('active');
+    if (dropdown.classList.contains('active')) {
+      unreadCount = 0;
+      updateNotificationUI();
+    }
+  }
+
+  function markAllRead() {
+    notifications = [];
+    unreadCount = 0;
+    updateNotificationUI();
+    showToast("Все уведомления очищены");
+  }
+
+  // Закрытие уведомлений по клику вне меню
+  document.addEventListener('click', function(e) {
+    const wrapper = document.querySelector('.bell-wrapper');
+    const dropdown = document.getElementById('notifDropdown');
+    if (wrapper && !wrapper.contains(e.target) && dropdown.classList.contains('active')) {
+      dropdown.classList.remove('active');
+    }
+  });
+
   // ================= ПЛЕЕР =================
   function openPlayer(movie) {
     const modal = document.getElementById('playerModal');
@@ -419,7 +512,6 @@
     
     title.textContent = movie.title;
     
-    // Проверяем, есть ли у фильма трейлер
     if (movie.trailer) {
       video.style.display = 'block';
       noTrailerMsg.style.display = 'none';
@@ -436,7 +528,6 @@
         playPromise.catch(() => console.log("Автовоспроизведение заблокировано. Нажмите Play."));
       }
     } else {
-      // Если трейлера нет, показываем заглушку и останавливаем видео
       video.pause();
       video.src = ''; 
       video.style.display = 'none';
@@ -475,6 +566,7 @@
       avatar.classList.remove('logged-in');
       avatar.onclick = openAuthModal;
     }
+    updateNotificationUI();
   }
 
   function openAuthModal() {
@@ -512,6 +604,8 @@
         closeAuthModal();
         updateAuthUI();
         showToast("Вы успешно вошли!");
+        // Добавляем приветственное уведомление
+        addNotification("👋", `<b>Добро пожаловать, ${currentUser.name}!</b><br>Ваш персональный профиль готов.`);
       }
     } else {
       if (email && password && name) {
@@ -520,6 +614,7 @@
         closeAuthModal();
         updateAuthUI();
         showToast("Регистрация успешна!");
+        addNotification("🎉", `<b>Аккаунт создан!</b><br>Добро пожаловать в Кинопоиск, ${name}.`);
       } else {
         alert("Заполните все поля!");
       }
@@ -528,12 +623,14 @@
 
   function logout() {
     currentUser = null;
+    notifications = [];
+    unreadCount = 0;
     localStorage.removeItem('cinema_user');
     updateAuthUI();
     showToast("Вы вышли из аккаунта");
   }
 
-  // ================= УВЕДОМЛЕНИЯ (ТОСТЫ) =================
+  // ================= ТОСТЫ (ВСПЛЫВАЮЩИЕ) =================
   let toastTimeout;
   function showToast(message) {
     const toast = document.getElementById('toast');
@@ -575,7 +672,9 @@
   }
 
   function toggleFavorite(movieId, btnElement) {
+    const movie = allMovies.find(m => m.id === movieId);
     const index = favorites.indexOf(movieId);
+    
     if (index > -1) {
       favorites.splice(index, 1);
       if (btnElement) {
@@ -590,6 +689,8 @@
         btnElement.classList.add('active');
       }
       showToast("Добавлено в избранное");
+      // Добавляем уведомление
+      addNotification("❤️", `Фильм <b>«${movie.title}»</b> добавлен в избранное.`);
     }
     localStorage.setItem('cinema_favorites', JSON.stringify(favorites));
     updateFavoritesUI();
@@ -885,6 +986,7 @@
       closeCatalog();
       closeAuthModal();
       closePlayer();
+      document.getElementById('notifDropdown').classList.remove('active');
     }
   });
 
