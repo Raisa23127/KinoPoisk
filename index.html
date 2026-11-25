@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кинопоиск — Рекомендательная система</title>
+<style>
+  :root {
+    --bg: #100e19; --bg-light: #1a1726; --card: #232030; --card-hover: #2e2a3d;
+    --text: #ffffff; --text-secondary: #a5a5b0; --accent-yellow: #f5c518;
+    --accent-orange: #ff5500; --border: #33303f; --green: #4caf50;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; overflow-x: hidden; font-size: 15px; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+
+  /* ШАПКА */
+  .header { background: var(--bg-light); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .header-inner { max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 28px; }
+  .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 2px; flex-shrink: 0; cursor: pointer; }
+  .logo .k { color: var(--accent-orange); }
+  .logo .p { color: #fff; }
+  .nav-menu { display: flex; gap: 22px; font-size: 14px; font-weight: 500; }
+  .nav-menu a { color: var(--text-secondary); transition: color .2s, border-color .2s; border-bottom: 2px solid transparent; padding-bottom: 2px; cursor: pointer; }
+  .nav-menu a:hover { color: var(--text); }
+  .nav-menu a.active { color: var(--text); border-bottom-color: var(--accent-orange); }
+  .header-search { margin-left: auto; display: flex; align-items: center; background: var(--card); border-radius: 8px; padding: 0 14px; height: 40px; gap: 10px; width: 320px; transition: background .2s; }
+  .header-search:focus-within { background: var(--card-hover); }
+  .header-search input { background: none; border: none; outline: none; color: var(--text); width: 100%; font-size: 14px; font-family: inherit; }
+  .header-search input::placeholder { color: var(--text-secondary); }
+  .header-actions { display: flex; gap: 20px; align-items: center; color: var(--text-secondary); font-size: 20px; }
+  .header-actions span { cursor: pointer; transition: color .2s; position: relative; }
+  .header-actions span:hover { color: var(--text); }
+  .fav-count { position: absolute; top: -6px; right: -8px; background: var(--accent-orange); color: #fff; font-size: 10px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(0); transition: all 0.3s; }
+  .fav-count.active { opacity: 1; transform: scale(1); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-orange), #ff8c00); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; cursor: pointer; transition: transform 0.2s; }
+  .avatar:hover { transform: scale(1.05); }
+  .avatar.logged-in { background: linear-gradient(135deg, #4caf50, #2e7d32); }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+
+  /* БАННЕР */
+  .promo { position: relative; border-radius: 16px; overflow: hidden; min-height: 520px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 40px; border: 1px solid var(--border); background-size: cover; background-position: center; transition: background-image 0.5s ease-in-out; }
+  .promo-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(16,14,25,0.95) 0%, rgba(16,14,25,0.7) 40%, rgba(16,14,25,0.1) 100%), linear-gradient(0deg, rgba(16,14,25,0.9) 0%, transparent 40%, rgba(16,14,25,0.3) 100%); z-index: 0; pointer-events: none; }
+  .promo-content { padding: 40px 40px 20px; max-width: 650px; z-index: 2; position: relative; }
+  .promo-label { display: inline-block; background: var(--accent-orange); color: #fff; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 6px; margin-bottom: 14px; text-transform: uppercase; }
+  .promo h1 { font-size: 42px; font-weight: 800; line-height: 1.1; margin-bottom: 14px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+  .promo-meta { display: flex; gap: 18px; align-items: center; font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+  .rating-badge { background: var(--accent-yellow); color: #000; font-weight: 700; padding: 3px 8px; border-radius: 4px; font-size: 14px; }
+  .promo p { color: #ccc; font-size: 15px; margin-bottom: 24px; line-height: 1.6; max-width: 550px; }
+  
+  .btn-row { display: flex; gap: 12px; }
+  .btn { padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; display: inline-flex; align-items: center; gap: 8px; justify-content: center;}
+  .btn-orange { background: var(--accent-orange); color: #fff; }
+  .btn-orange:hover { background: #ff6b1a; transform: translateY(-1px); }
+  .btn-outline { background: rgba(255,255,255,0.15); color: var(--text); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(5px); }
+  .btn-outline:hover { background: rgba(255,255,255,0.25); }
+  .btn-outline.active { background: rgba(255, 85, 0, 0.2); color: var(--accent-orange); border-color: var(--accent-orange); }
+
+  .btn-back { background: none; border: none; color: var(--text-secondary); font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 15px; font-weight: 600; transition: color 0.2s; }
+  .btn-back:hover { color: #fff; }
+
+  .promo-thumbs { display: flex; gap: 12px; padding: 0 40px 30px; overflow-x: auto; z-index: 2; position: relative; transition: opacity 0.3s ease; scrollbar-width: none; }
+  .promo-thumbs::-webkit-scrollbar { display: none; }
+  .promo-thumb { flex: 0 0 100px; height: 150px; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s, border-color 0.2s; border: 2px solid transparent; position: relative; }
+  .promo-thumb:hover { transform: translateY(-4px); border-color: var(--accent-orange); }
+  .promo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  .promo.detail-view .promo-thumbs { display: none; }
+  .promo.detail-view .promo-overlay { background: linear-gradient(90deg, rgba(16,14,25,0.95) 0%, rgba(16,14,25,0.8) 50%, rgba(16,14,25,0.2) 100%), linear-gradient(0deg, rgba(16,14,25,0.95) 0%, transparent 50%); }
+
+  .section { margin-bottom: 44px; scroll-margin-top: 80px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .section-header h2 { font-size: 26px; font-weight: 700; }
+  .section-header .more { font-size: 14px; color: var(--text-secondary); cursor: pointer; transition: color .2s, transform .2s; display: flex; align-items: center; gap: 6px; }
+  .section-header .more:hover { color: var(--accent-orange); transform: translateX(4px); }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .movie-card { background: var(--card); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform .2s, background .2s; position: relative; }
+  .movie-card:hover { transform: translateY(-4px); background: var(--card-hover); }
+
+  .poster { aspect-ratio: 2/3; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+  .poster .fallback { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 16px; z-index: 0; background: linear-gradient(160deg, #232030 0%, #1a1726 100%); }
+  .poster-title { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; line-height: 1.3; text-shadow: 0 2px 10px rgba(0,0,0,0.4); position: relative; z-index: 2; }
+  .poster-sub { font-size: 0.7rem; color: rgba(255,255,255,0.7); margin-top: 8px; letter-spacing: 2px; text-transform: uppercase; position: relative; z-index: 2; }
+
+  .rating-corner { position: absolute; top: 8px; left: 8px; background: var(--accent-yellow); color: #000; font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 4px; z-index: 3; }
+  .rec-badge { position: absolute; top: 8px; right: 8px; background: rgba(76,175,80,0.9); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; backdrop-filter: blur(4px); z-index: 3; }
+
+  .card-info { padding: 10px 12px; }
+  .card-info h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-info .meta { font-size: 12px; color: var(--text-secondary); }
+
+  .scroll-row { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--accent-orange) transparent; }
+  .scroll-row::-webkit-scrollbar { height: 6px; }
+  .scroll-row::-webkit-scrollbar-thumb { background: var(--accent-orange); border-radius: 3px; }
+  .collection-card { flex: 0 0 280px; height: 160px; border-radius: 12px; display: flex; align-items: flex-end; padding: 16px; font-weight: 700; font-size: 16px; cursor: pointer; position: relative; overflow: hidden; transition: transform .2s; }
+  .collection-card:hover { transform: scale(1.03); }
+  .collection-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, transparent 60%); }
+  .collection-card span { position: relative; z-index: 2; }
+
+  .rec-banner { background: linear-gradient(135deg, #1a1726, #232030); border: 1px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 40px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .rec-banner .icon { font-size: 2.5rem; }
+  .rec-banner h3 { font-size: 20px; margin-bottom: 6px; }
+  .rec-banner p { color: var(--text-secondary); font-size: 14px; max-width: 600px; }
+  .rec-banner .link { margin-left: auto; color: var(--accent-orange); font-weight: 600; font-size: 14px; cursor: pointer; }
+
+  .metrics-table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 10px; overflow: hidden; font-size: 14px; }
+  .metrics-table th, .metrics-table td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); }
+  .metrics-table th { background: var(--bg-light); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+  .metrics-table tr:last-child td { border-bottom: none; }
+  .metrics-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .highlight-row td { color: var(--accent-yellow); font-weight: 600; }
+
+  .footer { border-top: 1px solid var(--border); background: var(--bg-light); padding: 40px 24px; margin-top: 60px; }
+  .footer-inner { max-width: 1280px; margin: 0 auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 30px; color: var(--text-secondary); font-size: 13px; }
+  .footer-col h4 { color: var(--text); font-size: 14px; margin-bottom: 12px; }
+  .footer-col a { display: block; margin-bottom: 8px; transition: color .2s; }
+  .footer-col a:hover { color: var(--accent-orange); }
+
+  .no-results { grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary); font-size: 16px; background: var(--card); border-radius: 12px; }
+
+  /* УВЕДОМЛЕНИЯ */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg-light); color: var(--text); padding: 16px 24px; border-radius: 12px; border-left: 4px solid var(--accent-orange); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; transform: translateY(100px); opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2000; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-icon { font-size: 20px; }
+
+  /* МОДАЛЬНЫЕ ОКНА */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; }
+  .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+  /* --- ПЛЕЕР --- */
+  .player-modal-content {
+    background: #000; border-radius: 16px; width: 100%; max-width: 1000px;
+    position: relative; transform: translateY(20px); transition: transform 0.3s ease;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .modal-overlay.active .player-modal-content { transform: translateY(0); }
+  
+  .player-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; background: #111; color: #fff;
+    border-bottom: 1px solid #333;
+  }
+  .player-title { font-size: 18px; font-weight: 600; }
+  .player-video-container {
+    width: 100%; aspect-ratio: 16/9; background: #000;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .player-video-container video {
+    width: 100%; height: 100%; outline: none;
+  }
+
+  .catalog-modal-content { background: var(--bg); border-radius: 16px; width: 100%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+  .modal-overlay.active .catalog-modal-content { transform: translateY(0); }
+  .catalog-header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 20px; background: var(--bg-light); position: sticky; top: 0; z-index: 10; }
+  .catalog-back-btn { background: none; border: none; color: var(--text-secondary); font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: color 0.2s; }
+  .catalog-back-btn:hover { color: var(--text); }
+  .catalog-title { font-size: 24px; font-weight: 700; margin: 0; }
+  .catalog-body { padding: 32px; overflow-y: auto; flex: 1; }
+
+  .auth-modal-content { background: var(--bg-light); border-radius: 16px; width: 100%; max-width: 400px; padding: 40px; position: relative; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+  .modal-overlay.active .auth-modal-content { transform: translateY(0); }
+  .auth-tabs { display: flex; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .auth-tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; color: var(--text-secondary); font-weight: 600; transition: color 0.2s, border-color 0.2s; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .auth-tab:hover { color: var(--text); }
+  .auth-tab.active { color: var(--text); border-bottom-color: var(--accent-orange); }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .form-group input { width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus { border-color: var(--accent-orange); }
+  .auth-btn { width: 100%; margin-top: 10px; }
+  .modal-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 10; }
+  .modal-close:hover { background: var(--accent-orange); }
+
+  @media (max-width: 768px) {
+    .catalog-header { padding: 16px 20px; }
+    .catalog-body { padding: 20px; }
+    .catalog-title { font-size: 20px; }
+    .auth-modal-content { padding: 24px; }
+    .promo-content { padding: 24px 20px 10px; }
+    .promo h1 { font-size: 28px; }
+    .promo-thumbs { padding: 0 20px 20px; }
+    .promo-thumb { flex: 0 0 80px; height: 120px; }
+    .player-header { padding: 12px 16px; }
+    .player-title { font-size: 16px; }
+  }
+  @media (max-width: 900px) {
+    .nav-menu { display: none; } .header-search { width: 200px; }
+    .section-header h2 { font-size: 22px; }
+  }
+  @media (max-width: 600px) {
+    .container { padding: 16px; } .header-search { display: none; }
+    .card-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .rec-banner { padding: 20px; } .rec-banner .link { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo" onclick="resetView()"><span class="k">К</span><span class="p">ино</span><span style="color:var(--accent-orange)">поиск</span></div>
+    
+    <nav class="nav-menu" id="mainNav">
+      <a class="active" onclick="scrollToSection('home', this)">Главная</a>
+      <a onclick="scrollToSection('catalog', this)">Фильмы</a>
+      <a onclick="scrollToSection('series', this)">Сериалы</a>
+      <a onclick="scrollToSection('collections', this)">Подборки</a>
+      <a onclick="scrollToSection('recommendations', this)">Рекомендации</a>
+    </nav>
+
+    <div class="header-search">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Поиск фильмов..." oninput="handleSearch()">
+      <span id="clearSearch" style="display:none; cursor:pointer; color:var(--text-secondary);" onclick="clearSearch()">✕</span>
+    </div>
+    <div class="header-actions">
+      <span>🔔</span>
+      <span onclick="scrollToFavorites()" title="Избранное">❤️<span class="fav-count" id="favCount">0</span></span>
+      <div class="avatar" id="headerAvatar" onclick="openAuthModal()" title="Войти или зарегистрироваться">Вход</div>
+    </div>
+  </div>
+</header>
+
+<main class="container" id="home">
+  <div id="mainContent">
+    <section class="promo" id="mainPromo">
+      <div class="promo-overlay"></div>
+      <div class="promo-content" id="promoContent"></div>
+      <div class="promo-thumbs" id="promoThumbs"></div>
+    </section>
+
+    <section class="section" id="favoritesSection" style="display: none;">
+      <div class="section-header"><h2><span style="color: var(--accent-orange);">❤️</span> Мое избранное</h2></div>
+      <div class="card-grid" id="favoritesGrid"></div>
+    </section>
+
+    <section class="rec-banner">
+      <div class="icon">🧠</div>
+      <div>
+        <h3>Персональные рекомендации</h3>
+        <p>На основе ваших просмотров и оценок наша система подобрала фильмы, которые с высокой вероятностью вам понравятся. Используется гибридный алгоритм: коллаборативная фильтрация + контентные эмбеддинги.</p>
+      </div>
+      <span class="link">Настроить →</span>
+    </section>
+
+    <section class="section" id="collections">
+      <div class="section-header"><h2>Подборки</h2><span class="more" onclick="openCatalog('collections')">Смотреть все →</span></div>
+      <div class="scroll-row" id="collectionsRow"></div>
+    </section>
+
+    <section class="section" id="recommendations">
+      <div class="section-header"><h2 id="recTitle">Рекомендации для вас</h2><span class="more" onclick="openCatalog('recommendations')">Смотреть все →</span></div>
+      <div class="card-grid" id="recommendationsGrid"></div>
+    </section>
+
+    <section class="section" id="series">
+      <div class="section-header"><h2>Сериалы (Сейчас смотрят)</h2><span class="more" onclick="openCatalog('trending')">Смотреть все →</span></div>
+      <div class="card-grid" id="trendingGrid"></div>
+    </section>
+
+    <section class="section" id="catalog">
+      <div class="section-header"><h2>Новинки кино</h2><span class="more" onclick="openCatalog('newReleases')">Смотреть все →</span></div>
+      <div class="card-grid" id="newGrid"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-header"><h2>Эффективность рекомендательной системы</h2></div>
+      <table class="metrics-table">
+        <thead><tr><th>Модель</th><th>NDCG@10</th><th>HitRate@10</th><th>Cold-start</th><th>Latency p95</th></tr></thead>
+        <tbody>
+          <tr><td>Коллаборативная (Matrix Factorization)</td><td>0.71</td><td>0.58</td><td>Слабо</td><td>35 мс</td></tr>
+          <tr><td>Контентная (BERT embeddings)</td><td>0.69</td><td>0.55</td><td>Хорошо</td><td>28 мс</td></tr>
+          <tr class="highlight-row"><td>Гибридная (наша)</td><td>0.78</td><td>0.64</td><td>Хорошо</td><td>42 мс</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <section class="section" id="searchResultsSection" style="display: none;">
+    <div class="section-header"><h2 id="searchTitle">Результаты поиска</h2></div>
+    <div class="card-grid" id="searchResultsGrid"></div>
+  </section>
+</main>
+
+<!-- ПЛЕЕР -->
+<div class="modal-overlay" id="playerModal" onclick="closePlayer(event)">
+  <div class="player-modal-content" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closePlayer()">✕</button>
+    <div class="player-header">
+      <span class="player-title" id="playerTitle">Название фильма</span>
+    </div>
+    <div class="player-video-container">
+      <div id="noTrailerMsg" style="display: none; position: absolute; inset: 0; background: #111; color: #a5a5b0; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
+        <span style="font-size: 40px; margin-bottom: 10px;">🎬</span>
+        <span style="font-size: 18px;">Трейлер для этого фильма скоро появится</span>
+      </div>
+      
+      <video id="videoPlayer" controls playsinline preload="metadata">
+        Ваш браузер не поддерживает видео.
+      </video>
+    </div>
+  </div>
+</div>
+
+<!-- КАТАЛОГ -->
+<div class="modal-overlay" id="catalogModal" onclick="closeCatalog(event)">
+  <div class="catalog-modal-content" onclick="event.stopPropagation()">
+    <div class="catalog-header">
+      <button class="catalog-back-btn" onclick="closeCatalog()">← Назад</button>
+      <h2 class="catalog-title" id="catalogTitle">Все фильмы</h2>
+    </div>
+    <div class="catalog-body">
+      <div class="card-grid" id="catalogGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- АВТОРИЗАЦИЯ -->
+<div class="modal-overlay" id="authModal" onclick="closeAuthModal(event)">
+  <div class="auth-modal-content" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Вход</div>
+      <div class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Регистрация</div>
+    </div>
+    <form id="authForm" onsubmit="handleAuth(event)">
+      <div class="form-group" id="groupName" style="display: none;">
+        <label>Ваше имя</label>
+        <input type="text" id="authName" placeholder="Как к вам обращаться?">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="authEmail" placeholder="example@mail.com" required>
+      </div>
+      <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" id="authPassword" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-orange auth-btn" id="authSubmitBtn">Войти</button>
+    </form>
+  </div>
+</div>
+
+<!-- УВЕДОМЛЕНИЕ -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✓</span>
+  <span id="toastText">Фильм добавлен в избранное</span>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-col"><h4>Кинопоиск</h4><a href="#">О проекте</a><a href="#">Контакты</a><a href="#">Вакансии</a></div>
+    <div class="footer-col"><h4>Пользователям</h4><a href="#">Помощь</a><a href="#">Обратная связь</a><a href="#">Правила</a></div>
+    <div class="footer-col"><h4>Рекомендации</h4><a href="#">Как это работает</a><a href="#">Алгоритмы</a><a href="#">Исследования</a></div>
+    <div class="footer-col" style="max-width:280px;"><h4>Курсовая работа</h4><p>Проектирование модуля рекомендательной системы для онлайн-кинотеатра. Демонстрационный прототип интерфейса.</p></div>
+  </div>
+</footer>
+
+<script>
+  // ================= ДАННЫЕ =================
+  const collections = [
+    { title: 'Лучшие фантастические фильмы', c1: '#1e3a5f', c2: '#0d1b2a' },
+    { title: 'Кино про космос', c1: '#4a2d5f', c2: '#1a1a2e' },
+    { title: 'Нолан: все фильмы', c1: '#5f1e1e', c2: '#3d1f1f' },
+    { title: 'Драмы, которые цепляют', c1: '#2d4a3e', c2: '#1f3a3d' },
+    { title: 'Триллеры до мурашек', c1: '#3d1f1f', c2: '#5f1e1e' },
+    { title: 'Для вечернего просмотра', c1: '#2a2d4a', c2: '#1a2d4a' },
+  ];
+
+  // ИСПРАВЛЕНО: Возвращены трейлеры для Интерстеллара и Гравитации
+  const recommendations = [
+    { id: 'interstellar', title: 'Интерстеллар', year: 2014, genre: 'Фантастика', rating: 8.7, score: 94, poster: 'images/interstellar.jpg', trailer: 'interstellar.mp4', description: 'Когда засуха, пыльные бури и вымирание растений приводят человечество к продовольственному кризису, коллектив исследователей и учёных отправляется сквозь червоточину в поисках планеты, которая сможет стать новым домом.' },
+    { id: 'gravity', title: 'Гравитация', year: 2013, genre: 'Фантастика', rating: 7.7, score: 91, poster: 'images/gravity.jpg', trailer: 'gravity.mp4', description: 'Доктор Райан Стоун, блестящий специалист в области медицинского инжиниринга, отправляется в свою первую космическую миссию. Но катастрофа оставляет её одну на орбите.' },
+    { id: 'martian', title: 'Марсианин', year: 2015, genre: 'Фантастика', rating: 8.0, score: 88, poster: 'images/martian.jpg', description: 'Марсианская миссия «Арес-3» из-за песчаной бури вынуждена покинуть Красную планету, оставив своего коллегу Марка Уотни одного. Теперь ему предстоит выжить на враждебной планете.' },
+    { id: 'moon', title: 'Луна 2112', year: 2009, genre: 'Фантастика', rating: 7.9, score: 85, poster: 'images/moon.jpg', description: 'Сэм Белл работает на лунной станции, добывающей гелий-3 для Земли. За три года одиночества он сталкивается с тайной, которая меняет всё.' },
+    { id: 'cloud-atlas', title: 'Облачный атлас', year: 2012, genre: 'Драма', rating: 7.4, score: 82, poster: 'images/cloud-atlas.jpg', description: 'Шесть историй, шесть эпох. Прошлое переплетается с настоящим, а судьбы героев влияют друг на друга через века.' },
+    { id: 'sunshine', title: 'Пекло', year: 2007, genre: 'Триллер', rating: 7.2, score: 79, poster: 'images/sunshine.jpg', description: 'Пятьдесят лет спустя Солнце умирает. Команда космического корабля «Икар-2» отправляется в опасное путешествие, чтобы оживить звезду.' },
+    { id: 'contact', title: 'Контакты', year: 1997, genre: 'Фантастика', rating: 7.5, score: 77, poster: 'images/contact.jpg', description: 'Учёный-астроном Элли Эрроуэй всю жизнь ищет доказательства существования внеземного разума. И однажды её поиски увенчаются успехом.' },
+    { id: 'arrival', title: 'Прибытие', year: 2016, genre: 'Фантастика', rating: 7.8, score: 75, poster: 'images/arrival.jpg', description: 'Внезапно в разных точках Земли приземляются загадочные корабли. Лингвист Луиза Бэнкс пытается найти способ общения с пришельцами.' },
+  ];
+
+  const trending = [
+    { id: 'oppenheimer', title: 'Оппенгеймер', year: 2023, genre: 'Драма', rating: 8.3, poster: 'images/oppenheimer.jpg', trailer: 'oppenheimer_trailerdigital_1920.mp4', description: 'История создания атомной бомбы и внутренние терзания Роберта Оппенгеймера, гения, который изменил ход мировой истории.' },
+    { id: 'barbie', title: 'Барби', year: 2023, genre: 'Комедия', rating: 7.0, poster: 'images/barbie.jpg', description: 'Барби и Кен отправляются в путешествие из идеального мира Барбилэнда в реальный мир, где их ждут невероятные приключения.' },
+    { id: 'dune2', title: 'Дюна: Часть вторая', year: 2024, genre: 'Фантастика', rating: 8.5, poster: 'images/dune-2.jpg', trailer: 'dunepart2_trailer4_1280.mp4', description: 'Пол Атрейдес объединяется с фременами, чтобы отомстить заговорщикам, уничтожившим его семью. Эпическое продолжение саги.' },
+    { id: 'poor-things', title: 'Бедные-несчастные', year: 2023, genre: 'Драма', rating: 7.8, poster: 'images/poor-things.jpg', description: 'Безумный учёный оживляет молодую женщину, которая жаждет познать мир и получить свободу.' },
+    { id: 'killers-flower-moon', title: 'Убийцы цветочной луны', year: 2023, genre: 'Криминал', rating: 7.7, poster: 'images/killers-flower-moon.jpg', description: 'На фоне нефтяной лихорадки 1920-х годов в Оклахоме происходит серия загадочных убийств коренного населения.' },
+    { id: 'napoleon', title: 'Наполеон', year: 2023, genre: 'История', rating: 6.5, poster: 'images/napoleon.jpg', description: 'Взлёт и падение французского императора Наполеона Бонапарта, его любовь к Жозефине и невероятные военные кампании.' },
+  ];
+
+  const newReleases = [
+    { id: 'ferrari', title: 'Феррари', year: 2023, genre: 'Биография', rating: 6.8, poster: 'images/ferrari.jpg', description: '1957 год. Основатель Ferrari пытается спасти свою компанию от банкротства, готовясь к легендарной гонке.' },
+    { id: 'minus-one', title: 'Минус один', year: 2024, genre: 'Триллер', rating: 7.3, poster: 'images/minus-one.jpg', description: 'Послевоенная Япония. Страна восстанавливается, а на фоне этого разворачивается драматическая история.' },
+    { id: 'empire-fall', title: 'Падение империи', year: 2024, genre: 'История', rating: 7.1, poster: 'images/empire-fall.jpg', description: 'Историческая драма о падении великой империи и судьбах людей, оказавшихся в центре событий.' },
+    { id: 'quiet-place', title: 'Тихое место: День первый', year: 2024, genre: 'Ужасы', rating: 7.0, poster: 'images/quiet-place-day-one.jpg', description: 'Узнайте, как началось вторжение смертоносных пришельцев, реагирующих на любой звук.' },
+    { id: 'inside-out-2', title: 'Головоломка 2', year: 2024, genre: 'Мультфильм', rating: 7.6, poster: 'images/inside-out-2.jpg', description: 'Райли взрослеет, и в её голове появляются новые эмоции: Тревожность, Зависть, Стыд и Скука.' },
+    { id: 'deadpool', title: 'Дэдпул и Росомаха', year: 2024, genre: 'Боевик', rating: 7.9, poster: 'images/deadpool-wolverine.jpg', description: 'Уэйд Уилсон объединяется с Росомахой, чтобы спасти свой мир от уничтожения.' },
+  ];
+
+  const allMovies = [...recommendations, ...trending, ...newReleases];
+  const originalRecTitle = document.getElementById('recTitle').innerHTML;
+  let resetTimeout;
+
+  const defaultPromoMovie = { id: 'dune2', title: 'Дюна: Часть вторая', year: 2024, genre: 'Фантастика · Боевик', rating: 8.5, poster: 'images/dune-2.jpg', trailer: 'dunepart2_trailer4_1280.mp4', description: 'Пол Атрейдес объединяется с фременами, чтобы отомстить заговорщикам, уничтожившим его семью. Эпическое продолжение саги, которое обязательно понравится вам, если вы смотрели «Интерстеллар» и «Прибытие».' };
+
+  // ================= ПЛЕЕР =================
+  function openPlayer(movie) {
+    const modal = document.getElementById('playerModal');
+    const title = document.getElementById('playerTitle');
+    const video = document.getElementById('videoPlayer');
+    const noTrailerMsg = document.getElementById('noTrailerMsg');
+    
+    title.textContent = movie.title;
+    
+    // Проверяем, есть ли у фильма трейлер
+    if (movie.trailer) {
+      video.style.display = 'block';
+      noTrailerMsg.style.display = 'none';
+      
+      video.pause();
+      video.src = movie.trailer;
+      video.load();
+      
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => console.log("Автовоспроизведение заблокировано. Нажмите Play."));
+      }
+    } else {
+      // Если трейлера нет, показываем заглушку и останавливаем видео
+      video.pause();
+      video.src = ''; 
+      video.style.display = 'none';
+      noTrailerMsg.style.display = 'flex';
+      
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closePlayer(event) {
+    if (event && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('playerModal');
+    const video = document.getElementById('videoPlayer');
+    
+    video.pause();
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  // ================= АВТОРИЗАЦИЯ =================
+  let currentUser = JSON.parse(localStorage.getItem('cinema_user')) || null;
+  let isLoginMode = true;
+
+  function updateAuthUI() {
+    const avatar = document.getElementById('headerAvatar');
+    if (currentUser) {
+      const letter = (currentUser.name || currentUser.email).charAt(0).toUpperCase();
+      avatar.textContent = letter;
+      avatar.classList.add('logged-in');
+      avatar.onclick = () => {
+        if(confirm(`Вы вошли как ${currentUser.name || currentUser.email}. Выйти?`)) logout();
+      };
+    } else {
+      avatar.textContent = 'Вход';
+      avatar.classList.remove('logged-in');
+      avatar.onclick = openAuthModal;
+    }
+  }
+
+  function openAuthModal() {
+    document.getElementById('authModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAuthModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('authModal').classList.remove('active');
+    if (!document.getElementById('catalogModal').classList.contains('active') && !document.getElementById('playerModal').classList.contains('active')) {
+      document.body.style.overflow = '';
+    }
+  }
+
+  function switchAuthTab(mode) {
+    isLoginMode = mode === 'login';
+    document.getElementById('tabLogin').classList.toggle('active', isLoginMode);
+    document.getElementById('tabRegister').classList.toggle('active', !isLoginMode);
+    document.getElementById('groupName').style.display = isLoginMode ? 'none' : 'block';
+    document.getElementById('authSubmitBtn').textContent = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+    document.getElementById('authForm').reset();
+  }
+
+  function handleAuth(event) {
+    event.preventDefault();
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    const name = document.getElementById('authName').value;
+
+    if (isLoginMode) {
+      if (email && password) {
+        currentUser = { email: email, name: name || email.split('@')[0] };
+        localStorage.setItem('cinema_user', JSON.stringify(currentUser));
+        closeAuthModal();
+        updateAuthUI();
+        showToast("Вы успешно вошли!");
+      }
+    } else {
+      if (email && password && name) {
+        currentUser = { email: email, name: name };
+        localStorage.setItem('cinema_user', JSON.stringify(currentUser));
+        closeAuthModal();
+        updateAuthUI();
+        showToast("Регистрация успешна!");
+      } else {
+        alert("Заполните все поля!");
+      }
+    }
+  }
+
+  function logout() {
+    currentUser = null;
+    localStorage.removeItem('cinema_user');
+    updateAuthUI();
+    showToast("Вы вышли из аккаунта");
+  }
+
+  // ================= УВЕДОМЛЕНИЯ (ТОСТЫ) =================
+  let toastTimeout;
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastText').textContent = message;
+    toast.classList.add('show');
+    
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  // ================= ИЗБРАННОЕ =================
+  let favorites = JSON.parse(localStorage.getItem('cinema_favorites')) || [];
+
+  function updateFavButtonState(movieId, btnId) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    const isFav = favorites.includes(movieId);
+    btn.innerHTML = isFav ? '✓ В избранном' : '＋ В избранное';
+    btn.classList.toggle('active', isFav);
+  }
+
+  function updateFavoritesUI() {
+    const countEl = document.getElementById('favCount');
+    countEl.textContent = favorites.length;
+    countEl.classList.toggle('active', favorites.length > 0);
+
+    const favSection = document.getElementById('favoritesSection');
+    const favGrid = document.getElementById('favoritesGrid');
+    
+    if (favorites.length > 0) {
+      favSection.style.display = 'block';
+      const favMovies = allMovies.filter(m => favorites.includes(m.id));
+      renderMovies('favoritesGrid', favMovies);
+    } else {
+      favSection.style.display = 'none';
+    }
+  }
+
+  function toggleFavorite(movieId, btnElement) {
+    const index = favorites.indexOf(movieId);
+    if (index > -1) {
+      favorites.splice(index, 1);
+      if (btnElement) {
+        btnElement.innerHTML = '＋ В избранное';
+        btnElement.classList.remove('active');
+      }
+      showToast("Удалено из избранного");
+    } else {
+      favorites.push(movieId);
+      if (btnElement) {
+        btnElement.innerHTML = '✓ В избранном';
+        btnElement.classList.add('active');
+      }
+      showToast("Добавлено в избранное");
+    }
+    localStorage.setItem('cinema_favorites', JSON.stringify(favorites));
+    updateFavoritesUI();
+  }
+
+  function scrollToFavorites() {
+    const favSection = document.getElementById('favoritesSection');
+    if (favorites.length > 0) {
+      favSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      showToast("Ваш список избранного пуст");
+    }
+  }
+
+  // ================= БАННЕР =================
+  function renderDefaultPromo() {
+    const promo = document.getElementById('mainPromo');
+    const content = document.getElementById('promoContent');
+    const thumbs = document.getElementById('promoThumbs');
+    
+    promo.classList.remove('detail-view');
+    promo.style.backgroundImage = `
+      linear-gradient(90deg, rgba(16,14,25,0.95) 0%, rgba(16,14,25,0.7) 40%, rgba(16,14,25,0.1) 100%),
+      linear-gradient(0deg, rgba(16,14,25,0.9) 0%, transparent 40%, rgba(16,14,25,0.3) 100%),
+      url('${defaultPromoMovie.poster}')
+    `;
+
+    content.innerHTML = `
+      <span class="promo-label">Рекомендация для вас</span>
+      <h1>${defaultPromoMovie.title}</h1>
+      <div class="promo-meta">
+        <span class="rating-badge">${defaultPromoMovie.rating}</span>
+        <span>${defaultPromoMovie.year}</span>
+        <span>2 ч 46 мин</span>
+        <span>${defaultPromoMovie.genre}</span>
+      </div>
+      <p>${defaultPromoMovie.description}</p>
+      <div class="btn-row">
+        <button class="btn btn-orange" onclick='openPlayer(${JSON.stringify(defaultPromoMovie)})'>▶ Смотреть</button>
+        <button class="btn btn-outline" id="btn-fav-${defaultPromoMovie.id}" onclick="toggleFavorite('${defaultPromoMovie.id}', this)">＋ В избранное</button>
+      </div>
+    `;
+
+    thumbs.style.display = 'flex';
+    renderPromoThumbs();
+    updateFavButtonState(defaultPromoMovie.id, `btn-fav-${defaultPromoMovie.id}`);
+  }
+
+  function renderPromoThumbs() {
+    const container = document.getElementById('promoThumbs');
+    container.innerHTML = '';
+    
+    const thumbMovies = [
+      recommendations[0], recommendations[1], trending[0], trending[1],
+      newReleases[0], newReleases[1], recommendations[2], trending[2]
+    ];
+
+    thumbMovies.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'promo-thumb';
+      div.innerHTML = `<img src="${m.poster}" alt="${m.title}" onerror="this.src='https://via.placeholder.com/100x150/232030/a5a5b0?text='+${m.title.charAt(0)}">`;
+      div.onclick = (e) => {
+        e.stopPropagation();
+        showMovieDetail(m);
+      };
+      container.appendChild(div);
+    });
+  }
+
+  function showMovieDetail(movie) {
+    const promo = document.getElementById('mainPromo');
+    const content = document.getElementById('promoContent');
+    const thumbs = document.getElementById('promoThumbs');
+    
+    promo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    promo.classList.add('detail-view');
+    thumbs.style.display = 'none';
+
+    promo.style.backgroundImage = `
+      linear-gradient(90deg, rgba(16,14,25,0.95) 0%, rgba(16,14,25,0.8) 50%, rgba(16,14,25,0.2) 100%),
+      linear-gradient(0deg, rgba(16,14,25,0.95) 0%, transparent 50%),
+      url('${movie.poster}')
+    `;
+
+    content.innerHTML = `
+      <button class="btn-back" onclick="renderDefaultPromo()">← Назад на главную</button>
+      <h1>${movie.title}</h1>
+      <div class="promo-meta">
+        <span class="rating-badge">${movie.rating}</span>
+        <span>${movie.year}</span>
+        <span>${movie.genre}</span>
+      </div>
+      <p>${movie.description || "Описание фильма скоро появится."}</p>
+      <div class="btn-row">
+        <button class="btn btn-orange" onclick='openPlayer(${JSON.stringify(movie)})'>▶ Смотреть</button>
+        <button class="btn btn-outline" id="btn-fav-${movie.id}" onclick="toggleFavorite('${movie.id}', this)">＋ В избранное</button>
+      </div>
+    `;
+
+    updateFavButtonState(movie.id, `btn-fav-${movie.id}`);
+  }
+
+  // ================= КАТАЛОГ =================
+  function openCatalog(type) {
+    const modal = document.getElementById('catalogModal');
+    const title = document.getElementById('catalogTitle');
+    const grid = document.getElementById('catalogGrid');
+    
+    let moviesToRender = [];
+
+    if (type === 'recommendations') {
+      title.textContent = 'Все рекомендации';
+      moviesToRender = recommendations;
+    } else if (type === 'trending') {
+      title.textContent = 'Все сериалы (Сейчас смотрят)';
+      moviesToRender = trending;
+    } else if (type === 'newReleases') {
+      title.textContent = 'Все новинки кино';
+      moviesToRender = newReleases;
+    } else if (type === 'collections') {
+      title.textContent = 'Все подборки';
+      grid.innerHTML = '';
+      collections.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'collection-card';
+        div.style.background = `linear-gradient(135deg, ${c.c1}, ${c.c2})`;
+        div.innerHTML = `<span>${c.title}</span>`;
+        div.onclick = () => {
+          closeCatalog();
+          handleCollectionClick(c.title);
+        };
+        grid.appendChild(div);
+      });
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+
+    renderMovies('catalogGrid', moviesToRender);
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCatalog(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('catalogModal').classList.remove('active');
+    if (!document.getElementById('authModal').classList.contains('active') && !document.getElementById('playerModal').classList.contains('active')) {
+      document.body.style.overflow = '';
+    }
+  }
+
+  // ================= НАВИГАЦИЯ =================
+  function scrollToSection(sectionId, element) {
+    clearSearch();
+    const target = document.getElementById(sectionId);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (element) {
+      document.querySelectorAll('.nav-menu a').forEach(link => link.classList.remove('active'));
+      element.classList.add('active');
+    }
+  }
+
+  // ================= РЕНДЕР =================
+  function renderCollections() {
+    const row = document.getElementById('collectionsRow');
+    row.innerHTML = '';
+    collections.forEach((c) => {
+      const div = document.createElement('div');
+      div.className = 'collection-card';
+      div.style.background = `linear-gradient(135deg, ${c.c1}, ${c.c2})`;
+      div.innerHTML = `<span>${c.title}</span>`;
+      div.onclick = () => handleCollectionClick(c.title);
+      row.appendChild(div);
+    });
+  }
+
+  function renderMovies(containerId, movies, showRecBadge = false) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    
+    if (movies.length === 0) {
+      container.innerHTML = `<div class="no-results">Ничего не найдено 😔</div>`;
+      return;
+    }
+
+    movies.forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'movie-card';
+      card.onclick = () => showMovieDetail(m);
+
+      card.innerHTML = `
+        <div class="poster">
+          <div class="fallback">
+            <div class="poster-title">${m.title}</div>
+            <div class="poster-sub">${m.year}</div>
+          </div>
+          <img src="${m.poster}" alt="${m.title}" onerror="this.style.display='none'">
+          <span class="rating-corner">${m.rating}</span>
+          ${showRecBadge && m.score ? `<span class="rec-badge">${m.score}%</span>` : ''}
+        </div>
+        <div class="card-info">
+          <h3>${m.title}</h3>
+          <div class="meta">${m.year} · ${m.genre}</div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // ================= ПОДБОРКИ =================
+  function handleCollectionClick(title) {
+    clearSearch();
+    closeCatalog();
+
+    const targetSection = document.getElementById('recommendations');
+    const sectionTitle = document.getElementById('recTitle');
+    
+    targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    sectionTitle.innerHTML = `Подборка: <span style="color:var(--accent-orange)">${title}</span>`;
+
+    let filtered = recommendations;
+    if (title.includes('космос')) {
+      filtered = recommendations.filter(m => ['interstellar', 'gravity', 'martian', 'moon', 'contact', 'arrival'].includes(m.id));
+    } else if (title.includes('Нолан')) {
+      filtered = recommendations.filter(m => ['interstellar', 'oppenheimer'].includes(m.id) || m.year >= 2014);
+    } else if (title.includes('Триллеры')) {
+      filtered = recommendations.filter(m => m.genre === 'Триллер' || m.genre === 'Криминал');
+    } else if (title.includes('Драмы')) {
+      filtered = recommendations.filter(m => m.genre === 'Драма');
+    } else if (title.includes('фантастические')) {
+      filtered = recommendations.filter(m => m.genre === 'Фантастика');
+    } else {
+      filtered = [...recommendations].sort(() => 0.5 - Math.random());
+    }
+    
+    renderMovies('recommendationsGrid', filtered, true);
+
+    clearTimeout(resetTimeout);
+    resetTimeout = setTimeout(() => { resetView(); }, 6000);
+  }
+
+  // ================= СБРОС =================
+  function resetView() {
+    renderDefaultPromo();
+    document.getElementById('recTitle').innerHTML = originalRecTitle;
+    renderMovies('recommendationsGrid', recommendations, true);
+    clearSearch();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    clearTimeout(resetTimeout);
+    
+    document.querySelectorAll('.nav-menu a').forEach(link => link.classList.remove('active'));
+    document.querySelector('.nav-menu a').classList.add('active');
+  }
+
+  function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('clearSearch').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('searchResultsSection').style.display = 'none';
+  }
+
+  // ================= ПОИСК =================
+  function handleSearch() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    const clearBtn = document.getElementById('clearSearch');
+    const mainContent = document.getElementById('mainContent');
+    const searchResultsSection = document.getElementById('searchResultsSection');
+    
+    clearBtn.style.display = q.length > 0 ? 'block' : 'none';
+
+    if (!q) {
+      mainContent.style.display = 'block';
+      searchResultsSection.style.display = 'none';
+      return;
+    }
+
+    mainContent.style.display = 'none';
+    searchResultsSection.style.display = 'block';
+
+    const results = allMovies.filter(m => 
+      m.title.toLowerCase().includes(q) || 
+      m.genre.toLowerCase().includes(q) ||
+      m.year.toString().includes(q)
+    );
+
+    document.getElementById('searchTitle').innerHTML = `Результаты поиска: <span style="color:var(--accent-orange)">"${q}"</span>`;
+    renderMovies('searchResultsGrid', results);
+  }
+
+  // Закрытие по Esc
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      closeCatalog();
+      closeAuthModal();
+      closePlayer();
+    }
+  });
+
+  // ================= ИНИЦИАЛИЗАЦИЯ =================
+  renderDefaultPromo();
+  updateAuthUI();
+  updateFavoritesUI(); 
+  renderCollections();
+  renderMovies('recommendationsGrid', recommendations, true);
+  renderMovies('trendingGrid', trending);
+  renderMovies('newGrid', newReleases);
+
+</script>
+
+</body>
+</html>
